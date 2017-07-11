@@ -177,6 +177,7 @@ function SplunkMessageTrace{
                         "runspace_id"=$_.RunspaceId;
                         "sender"=$_.SenderAddress;
                         "recipient"=$_.RecipientAddress;
+                        "subject"=$_.Subject;
                         "action"=$_.Status;
                         "dest_ip"=$_.ToIP;
                         "src_ip"=$_.FromIP;

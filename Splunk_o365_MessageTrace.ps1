@@ -157,9 +157,10 @@ function SplunkMessageTrace{
         #Set output path 
         $Path = "C:\Scripts\data\Office365\$($Page)_MessageTrace.json"
 
-        #Test if output path exists. Clear path or create path.
+        #Test if output path exists. If exists, Delete/Recreate: else Create Path.
         if(Test-Path -path $Path){
-            Clear-Content $Path
+            Remove-Item $Path -Force 
+            New-Item -Path $Path -ItemType File | Out-Null
             }
         else{
             New-Item -Path $Path -ItemType File | Out-Null
@@ -233,8 +234,8 @@ function main{
         #Output Complete
         write-host -ForegroundColor Green Complete Task $TaskCount
 
-        #Sleep for 60 seconds (This is to allow the Splunk forward time to collect the logs and close the file before the script restarts)
-        Start-Sleep 60
+        #Sleep for 90 seconds (This is to allow the Splunk forward time to collect the logs and close the file before the script restarts)
+        Start-Sleep 90
 
         $TaskCount++
 

@@ -60,7 +60,7 @@ function Enter-ExchangeSession{
         $global:PSOutlookSession = New-PSSession -Name "PSOutlook" -ConfigurationName Microsoft.Exchange -ConnectionUri $PSOutlookURL -Credential $Credential -WarningAction SilentlyContinue -Authentication Basic -AllowRedirection -SessionOption $so -ErrorAction Stop
         
         #Specify import command names
-        $tmpPSOutlookCommandNames = @("Get-MessageTrace", "Get-Mailbox", "Search-Mailbox" , "*-MailboxSearch")
+        $tmpPSOutlookCommandNames = @("Get-MessageTrace")
  
         #import PSSessions
         Import-Module ($global:importPSOutlookSession = Import-PSSession $global:PSOutlookSession -CommandName $tmpPSOutlookCommandNames -AllowClobber -DisableNameChecking -ErrorAction Stop) -Global -DisableNameChecking -Force 

@@ -9,6 +9,11 @@ $global:Credential;
 $global:PSOutlookSession;
 $global:importPSOutlookSession;
 
+#Get SID
+$objUser = New-Object System.Security.Principal.NTAccount($env:USERNAME)
+$strSID = $objUser.Translate([System.Security.Principal.SecurityIdentifier])
+$global:userSID = $strSID.Value
+
 #Sets Password and date in registry
 function SplunkO365Init{
     #User Name with O365 Get-MessageTrace Permissions 
@@ -19,10 +24,10 @@ function SplunkO365Init{
     $SecStringAsPlainText = $SecurePassword | ConvertFrom-SecureString
 
     #Create Registry Items for Main to use. 
-    New-Item -Path HKCU:\Software -Name O365 -Force 
-    New-ItemProperty -Path HKCU:\Software\O365 -Name SECSTRING -Value $SecStringAsPlainText -PropertyType String
-    New-ItemProperty -Path HKCU:\Software\O365 -Name USERNAME -Value $UserName -PropertyType String
-    New-ItemProperty -Path HKCU:\Software\O365 -Name STARTDATE -Value $(get-date).AddMinutes(-15) -PropertyType String
+    New-Item -Path Registry::HKEY_USERS\$($global:userSID)\Software -Name O365 -Force 
+    New-ItemProperty -Path Registry::HKEY_USERS\$($global:userSID)\Software\O365 -Name SECSTRING -Value $SecStringAsPlainText -PropertyType String
+    New-ItemProperty -Path Registry::HKEY_USERS\$($global:userSID)\Software\O365 -Name USERNAME -Value $UserName -PropertyType String
+    New-ItemProperty -Path Registry::HKEY_USERS\$($global:userSID)\Software\O365 -Name STARTDATE -Value $(get-date).AddMinutes(-15) -PropertyType String
 }
 
 # Open a session with exchange
@@ -135,7 +140,7 @@ function Remove-OldTranscripts {
 #Collect MessageTrace logs and output in JSON file
 function SplunkMessageTrace{
     #Get Start Date from Registry, Set End Date
-    $StartDate = get-date -date $(Get-ItemPropertyValue -Path HKCU:\Software\O365 -Name StartDate)
+    $StartDate = get-date -date $(Get-ItemPropertyValue -Path Registry::HKEY_USERS\$($global:userSID)\Software\O365 -Name StartDate)
     $EndDate = $(Get-Date).AddMinutes(-10)
 
     #Initiate Page
@@ -157,7 +162,7 @@ function SplunkMessageTrace{
         #Set output path 
         $Path = "C:\Scripts\data\Office365\$($Page)_MessageTrace.json"
 
-        #Test if output path exists. If exists, Delete/Recreate: else Create Path.
+        #Test if output path exists. If exists, Delete/Recreate or create path.
         if(Test-Path -path $Path){
             Remove-Item $Path -Force 
             New-Item -Path $Path -ItemType File | Out-Null
@@ -177,8 +182,8 @@ function SplunkMessageTrace{
                         "host"=$_.organization;
                         "runspace_id"=$_.RunspaceId;
                         "sender"=$_.SenderAddress;
-                        "recipient"=$_.RecipientAddress;
                         "subject"=$_.Subject;
+                        "recipient"=$_.RecipientAddress;
                         "action"=$_.Status;
                         "dest_ip"=$_.ToIP;
                         "src_ip"=$_.FromIP;
@@ -206,14 +211,15 @@ function SplunkMessageTrace{
     until ($(Get-Item $Path).Length -eq 0)
 
     #update registry date
-    Set-ItemProperty -Path HKCU:\Software\O365 -Name STARTDATE -Value $EndDate
+    Set-ItemProperty -Path Registry::HKEY_USERS\$($global:userSID)\Software\O365 -Name STARTDATE -Value $EndDate
 }
 
 #Main function
 function main{
+
     #Create Credential Object
-    $global:UserName = Get-ItemPropertyValue -Path HKCU:\Software\O365 -Name USERNAME
-    $global:SecurePassword = Get-ItemPropertyValue -Path HKCU:\Software\O365 -Name SECSTRING | ConvertTo-SecureString 
+    $global:UserName = Get-ItemPropertyValue -Path Registry::HKEY_USERS\$($global:userSID)\Software\O365 -Name USERNAME
+    $global:SecurePassword = Get-ItemPropertyValue -Path Registry::HKEY_USERS\$($global:userSID)\Software\O365 -Name SECSTRING | ConvertTo-SecureString 
     $global:Credential = New-Object System.Management.Automation.PSCredential -ArgumentList $UserName, $SecurePassword
 
     #Create Log Path Variable
@@ -242,6 +248,11 @@ function main{
         #End Logging 
         Stop-Transcript
     }
+
+    #Convert Password and save to Registry
+    $secString = $Credential.Password | ConvertFrom-SecureString 
+    Set-ItemProperty -Path Registry::HKEY_USERS\$($global:userSID)\Software\O365 -Name SECSTRING -Value $secString
+
 
 }
 
